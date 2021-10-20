@@ -1,0 +1,90 @@
+version: '2'
+services:
+
+  zookeeper:
+    image: debezium/zookeeper:1.6
+    ports:
+      - "2181:2181"
+      - "2888:2888"
+      - "3888:3888"
+
+  kafka:
+    image: debezium/kafka:1.6
+    ports:
+      - "9092:9092"
+    links:
+      - zookeeper
+    environment:
+      - KAFKA_BROKER_ID=1
+      - ZOOKEEPER_CONNECT=zookeeper:2181
+      - HOST_NAME=local
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      - KAFKA_REST_HOST_NAME=0.0.0.0
+    depends_on:
+      - zookeeper
+
+  mysql:
+    image: debezium/example-mysql:1.6
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=debezium
+      - MYSQL_USER=mysqluser
+      - MYSQL_PASSWORD=mysqlpw
+
+  connect:
+    image: debezium/connect:1.6
+    ports:
+      - "8083:8083"
+    links:
+      - kafka
+      - mysql
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=my_connect_configs
+      - OFFSET_STORAGE_TOPIC=my_connect_offsets
+      - STATUS_STORAGE_TOPIC=my_connect_statuses
+    depends_on:
+      - kafka
+      - mysql
+
+  connect-deployer:
+    image: debezium-connector-deployer
+    links:
+      - connect
+    environment:
+      - CONNECTOR_DSN=connect:8083
+      - CONNECTOR_NAME=inventory-connector
+      - DEBEZIUM_CONFIG_CONNECTOR_CLASS=io.debezium.connector.mysql.MySqlConnector
+      - DEBEZIUM_CONFIG_TASKS_MAX=1
+      - DEBEZIUM_CONFIG_DATABASE_HOSTNAME=mysql
+      - DEBEZIUM_CONFIG_DATABASE_PORT=3306
+      - DEBEZIUM_CONFIG_DATABASE_USER=root
+      - DEBEZIUM_CONFIG_DATABASE_PASSWORD=debezium
+      - DEBEZIUM_CONFIG_DATABASE_ID=184054
+      - DEBEZIUM_CONFIG_DATABASE_SERVER_NAME=dbserver1
+      - DEBEZIUM_CONFIG_DATABASE_INCLUDE_LIST=inventory
+      - DEBEZIUM_CONFIG_DATABASE_HISTORY_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - DEBEZIUM_CONFIG_DATABASE_HISTORY_KAFKA_TOPIC=schema-changes.inventory
+    depends_on:
+      - connect
+
+  kafkaUI:
+    image: provectuslabs/kafka-ui
+    container_name: customer-benefits-service-kafka-ui
+    links:
+      - zookeeper
+      - kafka
+    ports:
+      - "9000:8080"
+    restart: always
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
