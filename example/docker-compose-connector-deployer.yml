@@ -52,7 +52,7 @@ services:
       - mysql
 
   connect-deployer:
-    image: debezium-connector-deployer
+    image: dohernandez/debezium-connector-deployer:1.0.0
     links:
       - connect
     environment:
