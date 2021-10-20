@@ -78,5 +78,5 @@ Additionally, the connector name should be specified via `CONNECTOR_NAME` env va
 ## How it works
 Setting up a Kafka connector involves sending an HTTP request to the connector's REST API which is often done as a manual step. The API takes the config and stores it in a log-compacted Kafka topic. Connectors are therefore inherently stateful and their deployment is a pain to automate.
 
-This image tries to alleviate this by making the connector configurable through environment variables. When the image starts it builds a deployable file from the specified environment variables and POST it to the API. This is an idempotent operation=the first request will set up a new connector, and all subsequent requests will fail. As a result, starting the container several times with the same configuration will fail with `409 Conflict`. The will always tried 10 times before fails.
+This image tries to alleviate this by making the connector configurable through environment variables. When the image starts it builds a deployable file from the specified environment variables and POST it to the API. This is an idempotent operation=the first request will set up a new connector, and all subsequent requests will fail. As a result, starting the container several times with the same configuration will fail with `409 Conflict`. The image will always try 10 times before fails.
 
